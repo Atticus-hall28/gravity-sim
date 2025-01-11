@@ -1,0 +1,38 @@
+# Ignore build directories
+/build/
+/bin/
+/lib/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+/out/
+# Ignore SDL2 generated files
+*.dll
+*.dylib
+*.so
+*.so.*
+*.a
+*.lib
+
+# Ignore executables
+*.exe
+*.out
+
+# Ignore other generated files
+*.o
+*.obj
+*.pdb
+*.log
+
+# Ignore user-specific files
+*.user
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+
+# Ignore Visual Studio Code files
+.vscode/
+
