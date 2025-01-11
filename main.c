@@ -194,6 +194,7 @@ int absorb_body(body *b1, body *b2) {
     }
     return 0;
 }
+
 void set_color(SDL_Renderer *renderer, SDL_Color color){
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     return;
@@ -314,7 +315,7 @@ void calculate_gravity(body *b1, body *b2){
     double angle = get_points_angle(b2->x, b2->y, b1->x, b1->y);
     vector force_vector = angle_magnitude_to_vector(angle, force);
     vector acceleration = scale_vector(force_vector, 1/b1->mass);
-    vector velocity = scale_vector(acceleration, 0.01);
+    vector velocity = scale_vector(acceleration, 0.01666667);
     b1->Xspeed += velocity.x;
     b1->Yspeed += velocity.y;
     return;
@@ -378,8 +379,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    bodys[0] = create_body(&numBodys,xorign+600,yorign,10,0,3,10e13,RED);
-    bodys[1] = create_body(&numBodys,xorign-600,yorign,10,0,3,10e13,GREEN);
+    bodys[0] = create_body(&numBodys,xorign+600,yorign,10,0,-4,10e13,RED);
+    bodys[1] = create_body(&numBodys,xorign-600,yorign,10,0,4,10e13,GREEN);
     bodys[2] = create_body(&numBodys,xorign,yorign,35,0,0,10e15,YELLOW);
 
     while(running) {
