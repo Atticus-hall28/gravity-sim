@@ -379,10 +379,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    bodys[0] = create_body(&numBodys,xorign+600,yorign,10,0,-4,10e13,RED);
-    bodys[1] = create_body(&numBodys,xorign-600,yorign,10,0,4,10e13,GREEN);
-    bodys[2] = create_body(&numBodys,xorign,yorign,35,0,0,10e15,YELLOW);
-
+    bodys[0] = create_body(&numBodys,xorign+500,yorign,15,0,-4,1e14,RED);
+    bodys[1] = create_body(&numBodys,xorign+550,yorign,4,0,-5.6 ,7e13,GREEN);
+    bodys[2] = create_body(&numBodys,xorign,yorign,35,0,0,1e16,YELLOW);
+    bodys[3] = create_body(&numBodys,xorign-500,yorign,15,0,4,1e14,CYAN);
+    bodys[4] = create_body(&numBodys,xorign-550,yorign,4,0,5.6 ,7e13,MAGENTA);
     while(running) {
         Uint32 frameStart = SDL_GetTicks();
 
