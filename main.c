@@ -14,14 +14,37 @@ typedef struct {
     double x;
     double y;
 } vector;
+
+typedef struct {
+    double radius;
+    double Xspeed, Yspeed;
+    double x,y;
+    double mass;
+    SDL_Color color;
+
+}body;
+
 // Function to calculate the dot product of two vectors
 double dot_product(vector v1, vector v2) {
     return v1.x * v2.x + v1.y * v2.y;
 }
 
 // Function to calculate the magnitude (length) of a vector
-double magnitude(vector v) {
+double get_vector_magnitude(vector v) {
     return sqrt(v.x * v.x + v.y * v.y);
+}
+
+double get_vector_angle(vector v) {
+    return atan2(v.y, v.x);
+}
+
+
+//function to convert angle and magnitude to vector
+vector angle_magnitude_to_vector(double angle, double magnitude){
+    vector v;
+    v.x = magnitude * cos(angle);
+    v.y = magnitude * sin(angle);
+    return v;
 }
 
 // Function to subtract two vectors
@@ -48,14 +71,13 @@ vector scale_vector(vector v, double scalar) {
     return result;
 }
 
-typedef struct {
-    double radius;
-    double Xspeed, Yspeed;
-    double x,y;
-    double mass;
-    SDL_Color color;
 
-}body;
+double get_points_angle(double x1, double y1, double x2, double y2) {
+    double delta_y = y1 - y2;
+    double delta_x = x1 - x2;
+    return atan2(delta_y, delta_x);
+}
+
 
 // Function to calculate final velocities for a perfectly elastic 2D collision
 int calculate_vector_collision(body *body1, body *body2) {
@@ -85,7 +107,7 @@ int calculate_vector_collision(body *body1, body *body2) {
     normal.y = v_rel.y;
     */
     // Normalize the normal vector.
-    double norm_magnitude = magnitude(normal);
+    double norm_magnitude = get_vector_magnitude(normal);
 
     if(norm_magnitude == 0){
         printf("Error: Relative velocity magnitude is zero.\n");
@@ -227,6 +249,17 @@ void draw_body(SDL_Renderer *renderer, body *b){
     return;
 }
 
+void calculate_gravity(body *b1, body *b2){
+    double distance = sqrt(pow(b1->x - b2->x, 2) + pow(b1->y - b2->y, 2));
+    double force = 6.674 * pow(10,-11)* b1->mass * b2->mass / pow(distance,2);
+    double angle = get_points_angle(b2->x, b2->y, b1->x, b1->y);
+    vector force_vector = angle_magnitude_to_vector(angle, force);
+    vector acceleration = scale_vector(force_vector, 1/b1->mass);
+    vector velocity = scale_vector(acceleration, 0.01);
+    b1->Xspeed += velocity.x;
+    b1->Yspeed += velocity.y;
+    return;
+}
 
 body *create_body(int *numBodys_ptr, double x, double y, int radius, double Xspeed, double Yspeed,double mass, SDL_Color color){
     body *b = malloc(sizeof(body));
@@ -259,8 +292,8 @@ int main(int argc, char *argv[]) {
     int numBodys = 0;
     int running = true;
     body *bodys[100];
-    bodys[0] = create_body(&numBodys,50,50,10,1,0,1,RED);
-    bodys[1] = create_body(&numBodys,200,50,20,-1,0,10,GREEN);
+    bodys[0] = create_body(&numBodys,200,300,20,-3,0,10e15,RED);
+    bodys[1] = create_body(&numBodys,200,100,20,3,0,10e15,GREEN);
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
         return 1;
@@ -299,22 +332,26 @@ int main(int argc, char *argv[]) {
             }
         }
         // Set background color to white
-        set_color(renderer, WHITE);
+        set_color(renderer, BLACK);
         SDL_RenderClear(renderer);
 
-    
 
+        
         for(int i = 0; i < numBodys; i++){
             for(int j = 0; j < numBodys; j++){
                 if(i != j){
                     if(body_collision(bodys[i], bodys[j])){
                         calculate_vector_collision(bodys[i], bodys[j]);
+                    }else {
+                        calculate_gravity(bodys[i], bodys[j]);
                     }
                 }
             }
-            update_body(bodys[i]);
-            draw_body(renderer, bodys[i]);
         }
+                for(int i = 0; i < numBodys; i++){
+                update_body(bodys[i]);
+                draw_body(renderer, bodys[i]);
+     }
         SDL_RenderPresent(renderer);
 
         // Frame limiting
