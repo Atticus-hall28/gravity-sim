@@ -14,8 +14,8 @@ const SDL_Color MAGENTA = {255,0,255,255};
 const SDL_Color ORANGE = {255,165,0,255};
 const SDL_Color PURPLE = {128,0,128,255};
 const SDL_Color PINK = {255,192,203,255};
-const int WIDTH = 640;
-const int HEIGHT = 480;
+const int WIDTH = 1920; //640
+const int HEIGHT = 1080; //480
 
 // Structure to represent a 2D vector
 typedef struct  {
@@ -24,6 +24,7 @@ typedef struct  {
 } vector;
 
 typedef struct { //body structure
+    bool isAlive;
     double radius; //radius of the body
     double Xspeed, Yspeed; //speed of the body
     double x,y; //
@@ -45,7 +46,6 @@ double get_vector_magnitude(vector v) {
 double get_vector_angle(vector v) {
     return atan2(v.y, v.x);
 }
-
 
 //function to convert angle and magnitude to vector
 vector angle_magnitude_to_vector(double angle, double magnitude){
@@ -79,13 +79,11 @@ vector scale_vector(vector v, double scalar) {
     return result;
 }
 
-
 double get_points_angle(double x1, double y1, double x2, double y2) {
     double delta_y = y1 - y2;
     double delta_x = x1 - x2;
     return atan2(delta_y, delta_x);
 }
-
 
 // Function to calculate final velocities for a perfectly elastic 2D collision
 int calculate_vector_collision(body *body1, body *body2) {
@@ -148,7 +146,6 @@ int calculate_vector_collision(body *body1, body *body2) {
     vector final_vector_1_tangent_vector = scale_vector(tangent,starting_vector_1_tangent);
     vector final_vector_2_tangent_vector = scale_vector(tangent,starting_vector_2_tangent);
 
-
     vector final_velocity_1 = add_vectors(final_vector_1_normal_vector, final_vector_1_tangent_vector);
     vector final_velocity_2 = add_vectors(final_vector_2_normal_vector, final_vector_2_tangent_vector);
 
@@ -160,11 +157,47 @@ int calculate_vector_collision(body *body1, body *body2) {
     return 0; // Indicate success
 }
 
+int absorb_body(body *b1, body *b2) {
+    double new_mass = b1->mass + b2->mass;
+    SDL_Color new_color;
+    new_color.r = (b1->color.r + b2->color.r) / 2;
+    new_color.g = (b1->color.g + b2->color.g) / 2;
+    new_color.b = (b1->color.b + b2->color.b) / 2;
+    new_color.a = (b1->color.a + b2->color.a) / 2;
+    double new_radius = sqrt(pow(b1->radius, 2) + pow(b2->radius, 2));
+    double new_x = (b1->x * b1->mass + b2->x * b2->mass) / new_mass;
+    double new_y = (b1->y * b1->mass + b2->y * b2->mass) / new_mass;
+    double new_Xspeed = (b1->Xspeed * b1->mass + b2->Xspeed * b2->mass) / new_mass;
+    double new_Yspeed = (b1->Yspeed * b1->mass + b2->Yspeed * b2->mass) / new_mass;
+    if (b1->mass > b2->mass) {
+        b1->mass = new_mass;
+        b1->radius = new_radius;
+        b1->color = new_color;
+        b1->x = new_x;
+        b1->y = new_y;
+        b1->Xspeed = new_Xspeed;
+        b1->Yspeed = new_Yspeed;
+        b2->mass = 0;
+        b2->isAlive = false;
+        
+
+    } else {
+        b2->mass = new_mass;
+        b2->radius = new_radius;
+        b2->color = new_color;
+        b2->x = new_x;
+        b2->y = new_y;
+        b2->Xspeed = new_Xspeed;
+        b2->Yspeed = new_Yspeed;
+        b1->mass = 0;
+        b1->isAlive = false;
+    }
+    return 0;
+}
 void set_color(SDL_Renderer *renderer, SDL_Color color){
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     return;
 }
-
 
 void draw_circle_octants(SDL_Renderer* renderer, double body_x, double body_y, double radius) {
  
@@ -221,15 +254,15 @@ void draw_circle_octants(SDL_Renderer* renderer, double body_x, double body_y, d
         }
         x++;
 
-
     }
 
 }
 
-int body_collision(body *b1, body *b2){
+// Function to calculate collision and return overlap
+int body_collision(body *b1, body *b2) {
     double distance = sqrt(pow(b1->x - b2->x, 2) + pow(b1->y - b2->y, 2));
-    if(distance <= b1->radius+b2->radius)
-    {
+    double overlap = b1->radius + b2->radius - distance;
+    if (overlap > 0) {
         return 1;
     }
     return 0;
@@ -249,18 +282,18 @@ void update_body(int self, body *b[100], int numBodys){
    
     b[self]->x += b[self]->Xspeed;
     for(int i = 0; i < numBodys; i++){
-        if(i != self){
+        if(i != self && b[i]->isAlive){
             if(body_collision(b[self], b[i])){
-                b[self]->x = -b[self]->Xspeed;
+                b[self]->x -= b[self]->Xspeed ;
                 
             }
         }
     }
     b[self]->y += b[self]->Yspeed;
     for(int i = 0; i < numBodys; i++){
-        if(i != self){
+        if(i != self && b[i]->isAlive){
             if(body_collision(b[self], b[i])){
-                b[self]->y = -b[self]->Yspeed;
+                b[self]->y -= b[self]->Yspeed;
 
             }
         }
@@ -298,6 +331,7 @@ body *create_body(int *numBodys_ptr, double x, double y, int radius, double Xspe
     b->y = y;
     b->mass = mass;
     b->color = color;
+    b->isAlive = true;
     (*numBodys_ptr)++;
     return b;
 }
@@ -318,9 +352,10 @@ int main(int argc, char *argv[]) {
     int numBodys = 0;
     int running = true;
     body *bodys[100];
-    bodys[0] = create_body(&numBodys,300,300,20,-2,0,10e15,RED);
-    bodys[1] = create_body(&numBodys,100,300,20,0,-2,10e15,GREEN);
-   // bodys[2] = create_body(&numBodys,100,100,20,2,0,10e15,BLUE);
+    
+    //bodys[0] = create_body(&numBodys,300,300,20,-2,0,10e15,RED);
+    //bodys[1] = create_body(&numBodys,100,300,20,0,-2,10e15,GREEN);
+    // bodys[2] = create_body(&numBodys,100,100,20,2,0,10e15,BLUE);
     //bodys[3] = create_body(&numBodys,300,300,20,0,2,10e15,WHITE);
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
@@ -333,7 +368,8 @@ int main(int argc, char *argv[]) {
         SDL_Quit();
         return 1;
     }
-
+    int xorign = WIDTH/2;
+    int yorign = HEIGHT/2;
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) {
         printf("Renderer creation failed: %s\n", SDL_GetError());
@@ -341,6 +377,10 @@ int main(int argc, char *argv[]) {
         SDL_Quit();
         return 1;
     }
+
+    bodys[0] = create_body(&numBodys,xorign+600,yorign,10,0,3,10e13,RED);
+    bodys[1] = create_body(&numBodys,xorign-600,yorign,10,0,3,10e13,GREEN);
+    bodys[2] = create_body(&numBodys,xorign,yorign,35,0,0,10e15,YELLOW);
 
     while(running) {
         Uint32 frameStart = SDL_GetTicks();
@@ -363,25 +403,27 @@ int main(int argc, char *argv[]) {
         set_color(renderer, BLACK);
         SDL_RenderClear(renderer);
 
-
         
         for(int i = 0; i < numBodys; i++){
             for(int j = 0; j < numBodys; j++){
-                if(i != j){
+                if(i != j&& bodys[i]->isAlive && bodys[j]->isAlive){
                     if(body_collision(bodys[i], bodys[j])){
-                        calculate_vector_collision(bodys[i], bodys[j]);
+                        //calculate_vector_collision(bodys[i], bodys[j]);
+                        absorb_body(bodys[i], bodys[j]);
                     }else {
                         calculate_gravity(bodys[i], bodys[j]);
                     }
                 }
             }
         }
-                for(int i = 0; i < numBodys; i++){
+        for(int i = 0; i < numBodys; i++){
+            if (bodys[i]->isAlive){
                 //update_body(i, bodys, numBodys);
                 bodys[i]->x += bodys[i]->Xspeed;
                 bodys[i]->y += bodys[i]->Yspeed;
                 draw_body(renderer, bodys[i]);
-     }
+            }
+        }
         SDL_RenderPresent(renderer);
 
         // Frame limiting
