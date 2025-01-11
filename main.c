@@ -14,13 +14,6 @@ typedef struct {
     double x;
     double y;
 } vector;
-
-typedef struct {
-    double x;
-    double y;
-    double radius;
-} circle;
-
 // Function to calculate the dot product of two vectors
 double dot_product(vector v1, vector v2) {
     return v1.x * v2.x + v1.y * v2.y;
@@ -56,10 +49,10 @@ vector scale_vector(vector v, double scalar) {
 }
 
 typedef struct {
-    SDL_Rect rect;
-    float Xspeed, Yspeed;
-    float x,y;
-    float mass;
+    double radius;
+    double Xspeed, Yspeed;
+    double x,y;
+    double mass;
     SDL_Color color;
 
 }body;
@@ -143,11 +136,11 @@ void set_color(SDL_Renderer *renderer, SDL_Color color){
 }
 
 
-void draw_circle_octants(SDL_Renderer* renderer, circle circle, SDL_Color color) {
-    set_color(renderer, color);
+void draw_circle_octants(SDL_Renderer* renderer, double body_x, double body_y, double radius) {
+ 
     int x = 0;
-    int y = circle.radius;
-    int d = 1 - circle.radius;
+    int y = radius;
+    int d = 1 - radius;
     int prev_x[8];
     int prev_y[8];
 
@@ -162,22 +155,22 @@ void draw_circle_octants(SDL_Renderer* renderer, circle circle, SDL_Color color)
         // Draw points in all 8 octants
            int point_x[8];
            int point_y[8];
-        point_x[0] = circle.x + x;
-        point_y[0] = circle.y + y;
-        point_x[1] = circle.x + y;
-        point_y[1] = circle.y + x;
-        point_x[2] = circle.x - y;
-        point_y[2] = circle.y + x;
-        point_x[3] = circle.x - x;
-        point_y[3] = circle.y + y;
-        point_x[4] = circle.x - x;
-        point_y[4] = circle.y - y;
-        point_x[5] = circle.x - y;
-        point_y[5] = circle.y - x;
-        point_x[6] = circle.x + y;
-        point_y[6] = circle.y - x;
-        point_x[7] = circle.x + x;
-        point_y[7] = circle.y - y;
+        point_x[0] = body_x + x;
+        point_y[0] = body_y + y;
+        point_x[1] = body_x + y;
+        point_y[1] = body_y + x;
+        point_x[2] = body_x - y;
+        point_y[2] = body_y + x;
+        point_x[3] = body_x - x;
+        point_y[3] = body_y + y;
+        point_x[4] = body_x - x;
+        point_y[4] = body_y - y;
+        point_x[5] = body_x - y;
+        point_y[5] = body_y - x;
+        point_x[6] = body_x + y;
+        point_y[6] = body_y - x;
+        point_x[7] = body_x + x;
+        point_y[7] = body_y - y;
 
       for(int i=0; i<8; i++){
         if(prev_x[i] != -1){
@@ -204,18 +197,17 @@ void draw_circle_octants(SDL_Renderer* renderer, circle circle, SDL_Color color)
 }
 
 int body_collision(body *b1, body *b2){
-    if(b1->rect.x < b2->rect.x + b2->rect.w &&
-       b1->rect.x + b1->rect.w > b2->rect.x &&
-       b1->rect.y < b2->rect.y + b2->rect.h &&
-       b1->rect.y + b1->rect.h > b2->rect.y){
+    double distance = sqrt(pow(b1->x - b2->x, 2) + pow(b1->y - b2->y, 2));
+    if(distance <= b1->radius+b2->radius)
+    {
         return 1;
     }
     return 0;
 }
 
 void simple_resolve_collision(body *b1, body *b2){
-    float tempX = b1->Xspeed;
-    float tempY = b1->Yspeed;
+    double tempX = b1->Xspeed;
+    double tempY = b1->Yspeed;
     b1->Xspeed = b2->Xspeed;
     b1->Yspeed = b2->Yspeed;
     b2->Xspeed = tempX;
@@ -226,24 +218,21 @@ void simple_resolve_collision(body *b1, body *b2){
 void update_body(body *b){
     b->x += b->Xspeed;
     b->y += b->Yspeed;
-    b->rect.x = (int)b->x;
-    b->rect.y = (int)b->y;
     return;
 }
 
 void draw_body(SDL_Renderer *renderer, body *b){
     SDL_SetRenderDrawColor(renderer, b->color.r, b->color.g, b->color.b, b->color.a);
-    SDL_RenderFillRect(renderer, &b->rect);
+    draw_circle_octants(renderer, b->x, b->y, b->radius);
     return;
 }
 
 
-body *create_body(int *numBodys_ptr, int x, int y, int width, int height, float Xspeed, float Yspeed,float mass, SDL_Color color){
+body *create_body(int *numBodys_ptr, double x, double y, int radius, double Xspeed, double Yspeed,double mass, SDL_Color color){
     body *b = malloc(sizeof(body));
-    b->rect.x = x;
-    b->rect.y = y;
-    b->rect.w = width;
-    b->rect.h = height;
+    b->x = x;
+    b->y = y;
+    b->radius = radius;
     b->Xspeed = Xspeed;
     b->Yspeed = Yspeed;
     b->x = x;
@@ -270,8 +259,8 @@ int main(int argc, char *argv[]) {
     int numBodys = 0;
     int running = true;
     body *bodys[100];
-    bodys[0] = create_body(&numBodys,50,50,10,10,1,0,1,RED);
-    bodys[1] = create_body(&numBodys,200,50,20,20,-1,0,10,GREEN);
+    bodys[0] = create_body(&numBodys,50,50,10,1,0,1,RED);
+    bodys[1] = create_body(&numBodys,200,50,20,-1,0,10,GREEN);
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
         return 1;
@@ -313,7 +302,7 @@ int main(int argc, char *argv[]) {
         set_color(renderer, WHITE);
         SDL_RenderClear(renderer);
 
-        draw_circle_octants(renderer, (circle){50,50,50},BLUE);
+    
 
         for(int i = 0; i < numBodys; i++){
             for(int j = 0; j < numBodys; j++){
