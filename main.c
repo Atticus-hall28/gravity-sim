@@ -15,7 +15,7 @@ const SDL_Color ORANGE = {255,165,0,255};
 const SDL_Color PURPLE = {128,0,128,255};
 const SDL_Color PINK = {255,192,203,255};
 const int WIDTH = 1920; //640
-const int HEIGHT = 1080; //480
+const int HEIGHT = 1080; //
 
 // Structure to represent a 2D vector
 typedef struct  {
@@ -23,15 +23,80 @@ typedef struct  {
     double y;
 } vector;
 
+
+//int *numbodies_ptr, double x, double y, int radius, double Xspeed, double Yspeed,double mass, SDL_Color color
 typedef struct { //body structure
     bool isAlive;
+    double x,y; //position of the body
     double radius; //radius of the body
     double Xspeed, Yspeed; //speed of the body
-    double x,y; //
-    double mass;
+    double mass;   //mass of the body
     SDL_Color color;
 
 }body;
+
+body* loadBodiesFromFile(const char *filename, int *numBodies) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening file");
+        return NULL; // Return NULL on failure
+    }
+    
+    body *bodies = NULL;   // Start with no bodies, initial size is 0
+    *numBodies = 0;        // initial number of bodies in file is 0
+    char line[256];        // Buffer to hold a line from the file
+    int capacity = 0;       // How many elements the array can hold currently
+    
+    
+    while (fgets(line, sizeof(line), file) != NULL) {
+        
+       
+        bool isAlive = true;
+        double radius, Xspeed, Yspeed, x, y, mass;
+        Uint8 r, g, b, a;
+        
+        // Parse each line
+        int itemsRead = sscanf(line, "%lf %lf %lf %lf %lf %lf %hhu %hhu %hhu %hhu",
+                                    &x, &y, &radius, &Xspeed, &Yspeed, &mass, &r, &g, &b, &a);
+        printf("line read: %s\n", line);
+       if(itemsRead != 10) {
+           printf("Error parsing line: %s\n", line);
+           continue; // skip to the next line
+       }
+       
+       if(capacity == *numBodies){
+           // Reallocate when buffer is full
+           capacity = (capacity == 0) ? 1 : capacity * 2; // Grow capacity by factor of two if initial capacity is 0 or double the existing capacity
+           bodies = realloc(bodies, capacity * sizeof(body)); // Reallocate the memory buffer
+           if(!bodies){
+               perror("Error reallocating memory");
+               fclose(file);
+               return NULL; // Return NULL if realloc fails
+           }
+       }
+
+       
+       // Create a new body
+       body newBody;
+       newBody.isAlive = isAlive;
+       newBody.radius = radius;
+       newBody.Xspeed = Xspeed;
+       newBody.Yspeed = Yspeed;
+       newBody.x = x;
+       newBody.y = y;
+       newBody.mass = mass;
+       newBody.color.r = r;
+       newBody.color.g = g;
+       newBody.color.b = b;
+       newBody.color.a = a;
+        
+        bodies[*numBodies] = newBody; // add the newly created body to the buffer
+        (*numBodies)++; // Increment the count of bodies
+    }
+    
+    fclose(file); // close the file after it is done being read
+    return bodies; // return the array of bodies
+}
 
 // Function to calculate the dot product of two vectors
 double dot_product(vector v1, vector v2) {
@@ -279,10 +344,10 @@ void simple_resolve_collision(body *b1, body *b2){
     return;
 }
 
-void update_body(int self, body *b[100], int numBodys){
+void update_body(int self, body *b[100], int numbodies){
    
     b[self]->x += b[self]->Xspeed;
-    for(int i = 0; i < numBodys; i++){
+    for(int i = 0; i < numbodies; i++){
         if(i != self && b[i]->isAlive){
             if(body_collision(b[self], b[i])){
                 b[self]->x -= b[self]->Xspeed ;
@@ -291,7 +356,7 @@ void update_body(int self, body *b[100], int numBodys){
         }
     }
     b[self]->y += b[self]->Yspeed;
-    for(int i = 0; i < numBodys; i++){
+    for(int i = 0; i < numbodies; i++){
         if(i != self && b[i]->isAlive){
             if(body_collision(b[self], b[i])){
                 b[self]->y -= b[self]->Yspeed;
@@ -321,7 +386,7 @@ void calculate_gravity(body *b1, body *b2){
     return;
 }
 
-body *create_body(int *numBodys_ptr, double x, double y, int radius, double Xspeed, double Yspeed,double mass, SDL_Color color){
+body *create_body(int *numbodies_ptr, double x, double y, int radius, double Xspeed, double Yspeed,double mass, SDL_Color color){
     body *b = malloc(sizeof(body));
     b->x = x;
     b->y = y;
@@ -333,7 +398,7 @@ body *create_body(int *numBodys_ptr, double x, double y, int radius, double Xspe
     b->mass = mass;
     b->color = color;
     b->isAlive = true;
-    (*numBodys_ptr)++;
+    (*numbodies_ptr)++;
     return b;
 }
 
@@ -350,14 +415,16 @@ void draw_rect(SDL_Renderer *renderer, SDL_Rect *rect, SDL_Color *color) {
 
 
 int main(int argc, char *argv[]) {
-    int numBodys = 0;
+    int numbodies = 0;
     int running = true;
-    body *bodys[100];
     
-    //bodys[0] = create_body(&numBodys,300,300,20,-2,0,10e15,RED);
-    //bodys[1] = create_body(&numBodys,100,300,20,0,-2,10e15,GREEN);
-    // bodys[2] = create_body(&numBodys,100,100,20,2,0,10e15,BLUE);
-    //bodys[3] = create_body(&numBodys,300,300,20,0,2,10e15,WHITE);
+    
+    body *bodies = loadBodiesFromFile("bodies.txt", &numbodies);
+
+    //bodies[0] = create_body(&numbodies,300,300,20,-2,0,10e15,RED);
+    //bodies[1] = create_body(&numbodies,100,300,20,0,-2,10e15,GREEN);
+    // bodies[2] = create_body(&numbodies,100,100,20,2,0,10e15,BLUE);
+    //bodies[3] = create_body(&numbodies,300,300,20,0,2,10e15,WHITE);
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
         return 1;
@@ -379,11 +446,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    bodys[0] = create_body(&numBodys,xorign+500,yorign,15,0,-4,1e14,RED);
-    bodys[1] = create_body(&numBodys,xorign+550,yorign,4,0,-5.6 ,7e13,GREEN);
-    bodys[2] = create_body(&numBodys,xorign,yorign,35,0,0,1e16,YELLOW);
-    bodys[3] = create_body(&numBodys,xorign-500,yorign,15,0,4,1e14,CYAN);
-    bodys[4] = create_body(&numBodys,xorign-550,yorign,4,0,5.6 ,7e13,MAGENTA);
+    /*
+    bodies[0] = create_body(&numbodies,xorign+500,yorign,15,0,-4,1e14,RED);
+    bodies[1] = create_body(&numbodies,xorign+550,yorign,4,0,-5.6 ,7e13,GREEN);
+    bodies[2] = create_body(&numbodies,xorign,yorign,35,0,0,1e16,YELLOW);
+    bodies[3] = create_body(&numbodies,xorign-500,yorign,15,0,4,1e14,CYAN);
+    bodies[4] = create_body(&numbodies,xorign-550,yorign,4,0,5.6 ,7e13,MAGENTA);
+    */
     while(running) {
         Uint32 frameStart = SDL_GetTicks();
 
@@ -406,24 +475,24 @@ int main(int argc, char *argv[]) {
         SDL_RenderClear(renderer);
 
         
-        for(int i = 0; i < numBodys; i++){
-            for(int j = 0; j < numBodys; j++){
-                if(i != j&& bodys[i]->isAlive && bodys[j]->isAlive){
-                    if(body_collision(bodys[i], bodys[j])){
-                        //calculate_vector_collision(bodys[i], bodys[j]);
-                        absorb_body(bodys[i], bodys[j]);
+        for(int i = 0; i < numbodies; i++){
+            for(int j = 0; j < numbodies; j++){
+                if(i != j && bodies[i].isAlive && bodies[j].isAlive){
+                    if(body_collision(&bodies[i], &bodies[j])){
+                        //calculate_vector_collision(bodies[i], bodies[j]);
+                        absorb_body(&bodies[i], &bodies[j]);
                     }else {
-                        calculate_gravity(bodys[i], bodys[j]);
+                        calculate_gravity(&bodies[i], &bodies[j]);
                     }
                 }
             }
         }
-        for(int i = 0; i < numBodys; i++){
-            if (bodys[i]->isAlive){
-                //update_body(i, bodys, numBodys);
-                bodys[i]->x += bodys[i]->Xspeed;
-                bodys[i]->y += bodys[i]->Yspeed;
-                draw_body(renderer, bodys[i]);
+        for(int i = 0; i < numbodies; i++){
+            if (bodies[i].isAlive){
+                //update_body(i, bodies, numbodies);
+                bodies[i].x += bodies[i].Xspeed;
+                bodies[i].y += bodies[i].Yspeed;
+                draw_body(renderer, &bodies[i]);
             }
         }
         SDL_RenderPresent(renderer);
@@ -436,9 +505,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    for(int i = 0; i < numBodys; i++){
-        free(bodys[i]);
-    }
+    free(bodies);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
