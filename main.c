@@ -252,7 +252,7 @@ void draw_body(SDL_Renderer *renderer, body *b){
 void calculate_gravity(body *b1, body *b2){
     double distance = sqrt(pow(b1->x - b2->x, 2) + pow(b1->y - b2->y, 2));
     double force = 6.674 * pow(10,-11)* b1->mass * b2->mass / pow(distance,2);
-    double angle = get_points_angle(b1->x, b1->y, b2->x, b2->y);
+    double angle = get_points_angle(b2->x, b2->y, b1->x, b1->y);
     vector force_vector = angle_magnitude_to_vector(angle, force);
     vector acceleration = scale_vector(force_vector, 1/b1->mass);
     vector velocity = scale_vector(acceleration, 0.01);
@@ -292,8 +292,8 @@ int main(int argc, char *argv[]) {
     int numBodys = 0;
     int running = true;
     body *bodys[100];
-    bodys[0] = create_body(&numBodys,400,50,10,0,0,10e4,RED);
-    bodys[1] = create_body(&numBodys,200,200,20,0,0,10e16,GREEN);
+    bodys[0] = create_body(&numBodys,200,300,20,-3,0,10e15,RED);
+    bodys[1] = create_body(&numBodys,200,100,20,3,0,10e15,GREEN);
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
         return 1;
@@ -335,21 +335,23 @@ int main(int argc, char *argv[]) {
         set_color(renderer, BLACK);
         SDL_RenderClear(renderer);
 
-    
-        calculate_gravity(bodys[0], bodys[1]);
+
+        
         for(int i = 0; i < numBodys; i++){
             for(int j = 0; j < numBodys; j++){
                 if(i != j){
                     if(body_collision(bodys[i], bodys[j])){
                         calculate_vector_collision(bodys[i], bodys[j]);
+                    }else {
+                        calculate_gravity(bodys[i], bodys[j]);
                     }
-                        
-            
-            }
-            update_body(bodys[i]);
-            draw_body(renderer, bodys[i]);
+                }
             }
         }
+                for(int i = 0; i < numBodys; i++){
+                update_body(bodys[i]);
+                draw_body(renderer, bodys[i]);
+     }
         SDL_RenderPresent(renderer);
 
         // Frame limiting
