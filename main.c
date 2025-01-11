@@ -8,17 +8,25 @@ const SDL_Color GREEN = {0,255,0,255};
 const SDL_Color BLUE = {0,0,255,255};
 const SDL_Color BLACK = {0,0,0,255};
 const SDL_Color WHITE = {255,255,255,255};
+const SDL_Color YELLOW = {255,255,0,255};
+const SDL_Color CYAN = {0,255,255,255};
+const SDL_Color MAGENTA = {255,0,255,255};
+const SDL_Color ORANGE = {255,165,0,255};
+const SDL_Color PURPLE = {128,0,128,255};
+const SDL_Color PINK = {255,192,203,255};
+const int WIDTH = 640;
+const int HEIGHT = 480;
 
 // Structure to represent a 2D vector
-typedef struct {
+typedef struct  {
     double x;
     double y;
 } vector;
 
-typedef struct {
-    double radius;
-    double Xspeed, Yspeed;
-    double x,y;
+typedef struct { //body structure
+    double radius; //radius of the body
+    double Xspeed, Yspeed; //speed of the body
+    double x,y; //
     double mass;
     SDL_Color color;
 
@@ -237,9 +245,27 @@ void simple_resolve_collision(body *b1, body *b2){
     return;
 }
 
-void update_body(body *b){
-    b->x += b->Xspeed;
-    b->y += b->Yspeed;
+void update_body(int self, body *b[100], int numBodys){
+   
+    b[self]->x += b[self]->Xspeed;
+    for(int i = 0; i < numBodys; i++){
+        if(i != self){
+            if(body_collision(b[self], b[i])){
+                b[self]->x = -b[self]->Xspeed;
+                
+            }
+        }
+    }
+    b[self]->y += b[self]->Yspeed;
+    for(int i = 0; i < numBodys; i++){
+        if(i != self){
+            if(body_collision(b[self], b[i])){
+                b[self]->y = -b[self]->Yspeed;
+
+            }
+        }
+    }
+   
     return;
 }
 
@@ -292,14 +318,16 @@ int main(int argc, char *argv[]) {
     int numBodys = 0;
     int running = true;
     body *bodys[100];
-    bodys[0] = create_body(&numBodys,200,300,20,-3,0,10e15,RED);
-    bodys[1] = create_body(&numBodys,200,100,20,3,0,10e15,GREEN);
+    bodys[0] = create_body(&numBodys,300,300,20,-2,0,10e15,RED);
+    bodys[1] = create_body(&numBodys,100,300,20,0,-2,10e15,GREEN);
+   // bodys[2] = create_body(&numBodys,100,100,20,2,0,10e15,BLUE);
+    //bodys[3] = create_body(&numBodys,300,300,20,0,2,10e15,WHITE);
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("SDL initialization failed: %s\n", SDL_GetError());
         return 1;
     }
 
-    SDL_Window *window = SDL_CreateWindow("SDL2 Base", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_SHOWN);
+    SDL_Window *window = SDL_CreateWindow("SDL2 Base", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
     if (!window) {
         printf("Window creation failed: %s\n", SDL_GetError());
         SDL_Quit();
@@ -349,7 +377,9 @@ int main(int argc, char *argv[]) {
             }
         }
                 for(int i = 0; i < numBodys; i++){
-                update_body(bodys[i]);
+                //update_body(i, bodys, numBodys);
+                bodys[i]->x += bodys[i]->Xspeed;
+                bodys[i]->y += bodys[i]->Yspeed;
                 draw_body(renderer, bodys[i]);
      }
         SDL_RenderPresent(renderer);
