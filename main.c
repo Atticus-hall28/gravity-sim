@@ -35,7 +35,7 @@ typedef struct { //body structure
 
 }body;
 
-body* loadBodiesFromFile(const char *filename, int *numBodies) {
+body* loadBodiesFromFile(const char *filename, int *numBodies, int *capacity) {
     FILE *file = fopen(filename, "r");
     if (!file) {
         perror("Error opening file");
@@ -45,7 +45,7 @@ body* loadBodiesFromFile(const char *filename, int *numBodies) {
     body *bodies = NULL;   // Start with no bodies, initial size is 0
     *numBodies = 0;        // initial number of bodies in file is 0
     char line[256];        // Buffer to hold a line from the file
-    int capacity = 0;       // How many elements the array can hold currently
+           // How many elements the array can hold currently
     
     
     while (fgets(line, sizeof(line), file) != NULL) {
@@ -64,10 +64,10 @@ body* loadBodiesFromFile(const char *filename, int *numBodies) {
            continue; // skip to the next line
        }
        
-       if(capacity == *numBodies){
+       if(*capacity == *numBodies){
            // Reallocate when buffer is full
-           capacity = (capacity == 0) ? 1 : capacity * 2; // Grow capacity by factor of two if initial capacity is 0 or double the existing capacity
-           bodies = realloc(bodies, capacity * sizeof(body)); // Reallocate the memory buffer
+           *capacity = (*capacity == 0) ? 1 : *capacity * 2; // Grow capacity by factor of two if initial capacity is 0 or double the existing capacity
+           bodies = realloc(bodies, *capacity * sizeof(body)); // Reallocate the memory buffer
            if(!bodies){
                perror("Error reallocating memory");
                fclose(file);
@@ -386,22 +386,33 @@ void calculate_gravity(body *b1, body *b2){
     return;
 }
 
-body *create_body(int *numbodies_ptr, double x, double y, int radius, double Xspeed, double Yspeed,double mass, SDL_Color color){
-    body *b = malloc(sizeof(body));
-    b->x = x;
-    b->y = y;
-    b->radius = radius;
-    b->Xspeed = Xspeed;
-    b->Yspeed = Yspeed;
-    b->x = x;
-    b->y = y;
-    b->mass = mass;
-    b->color = color;
-    b->isAlive = true;
-    (*numbodies_ptr)++;
-    return b;
-}
+body* create_body(body *bodies, int *numBodies, int *capacity, double x, double y, double radius, double Xspeed, double Yspeed, double mass, SDL_Color color) {
+    if (*capacity == *numBodies) {
+        // Reallocate when buffer is full
+        *capacity = (*capacity == 0) ? 1 : (*capacity * 2); // Grow capacity by factor of two if initial capacity is 0 or double the existing capacity
+        bodies = realloc(bodies, (*capacity) * sizeof(body)); // Reallocate the memory buffer
+        if (!bodies) {
+            perror("Error reallocating memory");
+            return NULL; // Return NULL if realloc fails
+        }
+    }
 
+    // Create a new body
+    body newBody;
+    newBody.isAlive = true;
+    newBody.x = x;
+    newBody.y = y;
+    newBody.radius = radius;
+    newBody.Xspeed = Xspeed;
+    newBody.Yspeed = Yspeed;
+    newBody.mass = mass;
+    newBody.color = color;
+
+    bodies[*numBodies] = newBody; // Add the newly created body to the buffer
+    (*numBodies)++; // Increment the count of bodies
+
+    return bodies;
+}
 
 
 void draw_rect(SDL_Renderer *renderer, SDL_Rect *rect, SDL_Color *color) {
@@ -415,11 +426,15 @@ void draw_rect(SDL_Renderer *renderer, SDL_Rect *rect, SDL_Color *color) {
 
 
 int main(int argc, char *argv[]) {
+    int capacity = 0;
     int numbodies = 0;
     int running = true;
+    int mouse_start_x = 0;
+    int mouse_start_y = 0;
+    vector mouse_vector;
     
     
-    body *bodies = loadBodiesFromFile("bodies.txt", &numbodies);
+    body *bodies = loadBodiesFromFile("bodies.txt", &numbodies,&capacity);
 
     //bodies[0] = create_body(&numbodies,300,300,20,-2,0,10e15,RED);
     //bodies[1] = create_body(&numbodies,100,300,20,0,-2,10e15,GREEN);
@@ -446,8 +461,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    
+  
     /*
-    bodies[0] = create_body(&numbodies,xorign+500,yorign,15,0,-4,1e14,RED);
     bodies[1] = create_body(&numbodies,xorign+550,yorign,4,0,-5.6 ,7e13,GREEN);
     bodies[2] = create_body(&numbodies,xorign,yorign,35,0,0,1e16,YELLOW);
     bodies[3] = create_body(&numbodies,xorign-500,yorign,15,0,4,1e14,CYAN);
@@ -457,19 +473,34 @@ int main(int argc, char *argv[]) {
         Uint32 frameStart = SDL_GetTicks();
 
         SDL_Event event;
-        while(SDL_PollEvent(&event)) {
-           switch (event.type) {
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
             case SDL_QUIT:
-                    running = 0;
-                    break;
-                case SDL_KEYDOWN:
-                    switch (event.key.keysym.sym) {
-                        case SDLK_a:
-                            printf("Key 'A' pressed\n");
-                            break;
-                    }
-            }
+                running = 0;
+                break;
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_a:
+                        printf("Key 'A' pressed\n");
+                        break;
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                mouse_start_x = event.button.x;
+                mouse_start_y = event.button.y;
+                break;
+            case SDL_MOUSEBUTTONUP:
+                mouse_vector.x = -(event.button.x - mouse_start_x)/30;
+                mouse_vector.y = -(event.button.y - mouse_start_y)/30;
+
+                if(event.button.button == SDL_BUTTON_LEFT){
+                    bodies = create_body(bodies, &numbodies, &capacity, event.button.x, event.button.y, 5, mouse_vector.x, mouse_vector.y, 1e8, BLUE);
+                }else if(event.button.button == SDL_BUTTON_RIGHT){
+                    bodies = create_body(bodies, &numbodies, &capacity, event.button.x, event.button.y, 15, mouse_vector.x, mouse_vector.y, 1e14, RED);
+                }
+                break;
         }
+    }
         // Set background color to white
         set_color(renderer, BLACK);
         SDL_RenderClear(renderer);
