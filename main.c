@@ -486,23 +486,19 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case SDL_MOUSEBUTTONDOWN:
-
                 mouse_start_x = event.button.x;
                 mouse_start_y = event.button.y;
-                
+                break;
             case SDL_MOUSEBUTTONUP:
-
-                mouse_vector.x = -(event.button.x - mouse_start_x)/60;
-                mouse_vector.y = -(event.button.y - mouse_start_y)/60;
+                mouse_vector.x = -(event.button.x - mouse_start_x)/30;
+                mouse_vector.y = -(event.button.y - mouse_start_y)/30;
 
                 if(event.button.button == SDL_BUTTON_LEFT){
                     bodies = create_body(bodies, &numbodies, &capacity, event.button.x, event.button.y, 15, mouse_vector.x, mouse_vector.y, 1e14, BLUE);
                 }else if(event.button.button == SDL_BUTTON_RIGHT){
                     bodies = create_body(bodies, &numbodies, &capacity, event.button.x, event.button.y, 15, mouse_vector.x, mouse_vector.y, 1e14, RED);
                 }
-               
                 break;
-                
         }
     }
         // Set background color to white
