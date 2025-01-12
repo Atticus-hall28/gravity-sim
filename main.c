@@ -228,10 +228,10 @@ int absorb_body(body **bodies, int *numBodies, int *capacity, int index1, int in
 
     double new_mass = b1->mass + b2->mass;
     SDL_Color new_color;
-    new_color.r = (b1->color.r*b1->mass + b2->color.r*b2->mass) / 2;
-    new_color.g = (b1->color.g*b1->mass + b2->color.g*b2->mass) / 2;
-    new_color.b = (b1->color.b*b1->mass + b2->color.b*b2->mass) / 2;
-    new_color.a = (b1->color.a*b1->mass + b2->color.a*b2->mass) / 2;
+    new_color.r = (b1->color.r + b2->color.r) / 2;
+    new_color.g = (b1->color.g + b2->color.g) / 2;
+    new_color.b = (b1->color.b + b2->color.b) / 2;
+    new_color.a = (b1->color.a + b2->color.a) / 2;
     double new_radius = sqrt(pow(b1->radius, 2) + pow(b2->radius, 2));
     double new_x = (b1->x * b1->mass + b2->x * b2->mass) / new_mass;
     double new_y = (b1->y * b1->mass + b2->y * b2->mass) / new_mass;
