@@ -222,7 +222,10 @@ int calculate_vector_collision(body *body1, body *body2) {
     return 0; // Indicate success
 }
 
-int absorb_body(body *b1, body *b2) {
+int absorb_body(body **bodies, int *numBodies, int *capacity, int index1, int index2) {
+    body *b1 = &(*bodies)[index1];
+    body *b2 = &(*bodies)[index2];
+
     double new_mass = b1->mass + b2->mass;
     SDL_Color new_color;
     new_color.r = (b1->color.r + b2->color.r) / 2;
@@ -234,6 +237,7 @@ int absorb_body(body *b1, body *b2) {
     double new_y = (b1->y * b1->mass + b2->y * b2->mass) / new_mass;
     double new_Xspeed = (b1->Xspeed * b1->mass + b2->Xspeed * b2->mass) / new_mass;
     double new_Yspeed = (b1->Yspeed * b1->mass + b2->Yspeed * b2->mass) / new_mass;
+
     if (b1->mass > b2->mass) {
         b1->mass = new_mass;
         b1->radius = new_radius;
@@ -242,10 +246,6 @@ int absorb_body(body *b1, body *b2) {
         b1->y = new_y;
         b1->Xspeed = new_Xspeed;
         b1->Yspeed = new_Yspeed;
-        b2->mass = 0;
-        b2->isAlive = false;
-        
-
     } else {
         b2->mass = new_mass;
         b2->radius = new_radius;
@@ -254,9 +254,22 @@ int absorb_body(body *b1, body *b2) {
         b2->y = new_y;
         b2->Xspeed = new_Xspeed;
         b2->Yspeed = new_Yspeed;
-        b1->mass = 0;
-        b1->isAlive = false;
     }
+
+    // Remove the absorbed body from memory
+    int absorbedIndex = (b1->mass > b2->mass) ? index2 : index1;
+    for (int i = absorbedIndex; i < *numBodies - 1; i++) {
+        (*bodies)[i] = (*bodies)[i + 1];
+    }
+    (*numBodies)--;
+
+    // Reallocate memory to shrink the array
+    *bodies = realloc(*bodies, (*capacity) * sizeof(body));
+    if (!*bodies && *numBodies > 0) {
+        perror("Error reallocating memory");
+        return -1; // Return -1 if realloc fails
+    }
+
     return 0;
 }
 
@@ -511,7 +524,7 @@ int main(int argc, char *argv[]) {
                 if(i != j && bodies[i].isAlive && bodies[j].isAlive){
                     if(body_collision(&bodies[i], &bodies[j])){
                         //calculate_vector_collision(bodies[i], bodies[j]);
-                        absorb_body(&bodies[i], &bodies[j]);
+                        absorb_body(&bodies, &numbodies, &capacity, i, j);
                     }else {
                         calculate_gravity(&bodies[i], &bodies[j]);
                     }
