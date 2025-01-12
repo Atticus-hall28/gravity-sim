@@ -1,8 +1,13 @@
+ 
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#include <time.h>
 const SDL_Color RED = {255,0,0,255};
 const SDL_Color GREEN = {0,255,0,255};
 const SDL_Color BLUE = {0,0,255,255};
@@ -31,6 +36,7 @@ typedef struct { //body structure
     double radius; //radius of the body
     double Xspeed, Yspeed; //speed of the body
     double mass;   //mass of the body
+
     SDL_Color color;
 
 }body;
@@ -56,7 +62,7 @@ body* loadBodiesFromFile(const char *filename, int *numBodies, int *capacity) {
         Uint8 r, g, b, a;
         
         // Parse each line
-        int itemsRead = sscanf(line, "%lf %lf %lf %lf %lf %lf %hhu %hhu %hhu %hhu",
+        int itemsRead = sscanf(line, "%lf %lf %lf %lf %lf %lf  %hhu %hhu %hhu %hhu",
                                     &x, &y, &radius, &Xspeed, &Yspeed, &mass, &r, &g, &b, &a);
         printf("line read: %s\n", line);
        if(itemsRead != 10) {
@@ -444,7 +450,13 @@ int main(int argc, char *argv[]) {
     int running = true;
     int mouse_start_x = 0;
     int mouse_start_y = 0;
+    int camera_x = 0;
+    int camera_y = 0;
+    int keys[4] = {0,0,0,0};
     vector mouse_vector;
+    int mouse_x, mouse_y;
+    srand(time(NULL));
+    
     
     
     body *bodies = loadBodiesFromFile("bodies.txt", &numbodies,&capacity);
@@ -493,10 +505,56 @@ int main(int argc, char *argv[]) {
                 break;
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
+                    case SDLK_SPACE:
+                         
+                        for (int i = 0; i < numbodies; i++) {
+                            bodies[i].x -= camera_x;
+                            
+                            bodies[i].y -= camera_y;
+                            
+                        }
+                        camera_x = 0;
+                        camera_y = 0;
+                        break;
+
+                    case SDLK_ESCAPE:
+                        running = 0;
+                        break;
+                    case SDLK_w:
+                        keys[0] = 1;
+                        break;
                     case SDLK_a:
-                        printf("Key 'A' pressed\n");
+                        keys[1] = 1;
+                        break;
+                    case SDLK_s:
+                        keys[2] = 1;
+                        break;
+                    case SDLK_d:
+                        keys[3] = 1;
+                        break;
+                } 
+            break;  
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym) {
+                    case SDLK_w:
+                        keys[0] = 0;
+                        break;
+                    case SDLK_a:
+                        keys[1] = 0;
+                        break;
+                    case SDLK_s:
+                        keys[2] = 0;
+                        break;
+                    case SDLK_d:
+                        keys[3] = 0;
                         break;
                 }
+            
+
+
+
+
+
                 break;
             case SDL_MOUSEBUTTONDOWN:
                 mouse_start_x = event.button.x;
@@ -507,13 +565,44 @@ int main(int argc, char *argv[]) {
                 mouse_vector.y = -(event.button.y - mouse_start_y)/30;
 
                 if(event.button.button == SDL_BUTTON_LEFT){
-                    bodies = create_body(bodies, &numbodies, &capacity, event.button.x, event.button.y, 5, mouse_vector.x, mouse_vector.y, 1e8, BLUE);
+                    bodies = create_body(bodies, &numbodies, &capacity, event.button.x, event.button.y, 5, mouse_vector.x*2, mouse_vector.y*2, 1e12, BLUE);
                 }else if(event.button.button == SDL_BUTTON_RIGHT){
                     bodies = create_body(bodies, &numbodies, &capacity, event.button.x, event.button.y, 15, mouse_vector.x, mouse_vector.y, 1e14, RED);
+                }else if (event.button.button == SDL_BUTTON_MIDDLE){
+                    for(int i = 0; i < 10; i++){
+                            bodies = create_body(bodies, &numbodies, &capacity,
+                             event.button.x+ rand() % (100 - -100 + 1), event.button.y + rand() % (100 - -100 + 1)
+                             , 5, mouse_vector.x, mouse_vector.y, 1e8, GREEN);
+                        }
                 }
                 break;
         }
-    }
+    }       
+        if(keys[0]){
+            for(int i = 0; i < numbodies;i++){
+                bodies[i].y += 5;
+                camera_y += 5;
+            }
+        }
+        if(keys[1]){
+            for(int i = 0; i< numbodies;i++){
+                bodies[i].x += 5;
+                camera_x += 5;
+            }
+        }
+        if(keys[2]){
+            for(int i = 0; i< numbodies;i++){
+                bodies[i].y += -5;
+                camera_y -= 5;
+            }
+        }
+        if(keys[3]){
+            for(int i = 0; i< numbodies;i++){
+                bodies[i].x += -5;
+                camera_x -= 5;
+            }
+        }
+
         // Set background color to white
         set_color(renderer, BLACK);
         SDL_RenderClear(renderer);
